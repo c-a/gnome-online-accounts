@@ -142,13 +142,16 @@ get_scope (GoaOAuth2Provider *provider)
          "https://mail.google.com/ "
 
          /* Google Talk */
-         "https://www.googleapis.com/auth/googletalk";
+         "https://www.googleapis.com/auth/googletalk "
+
+         /* Tasks API: https://developers.google.com/google-apps/tasks/auth */
+         "https://www.googleapis.com/auth/tasks";
 }
 
 static guint
 get_credentials_generation (GoaProvider *provider)
 {
-  return 3;
+  return 4;
 }
 
 static const gchar *
@@ -379,12 +382,14 @@ build_object (GoaProvider         *provider,
   GoaChat *chat;
   GoaDocuments *documents;
   GoaPasswordBased *password_based;
+  GoaTasks *tasks;
   gboolean ret;
   gboolean mail_enabled;
   gboolean calendar_enabled;
   gboolean contacts_enabled;
   gboolean chat_enabled;
   gboolean documents_enabled;
+  gboolean tasks_enabled;
 
   account = NULL;
   mail = NULL;
@@ -392,6 +397,7 @@ build_object (GoaProvider         *provider,
   contacts = NULL;
   chat = NULL;
   documents = NULL;
+  tasks = NULL;
   ret = FALSE;
 
   /* Chain up */
@@ -519,6 +525,24 @@ build_object (GoaProvider         *provider,
         goa_object_skeleton_set_documents (object, NULL);
     }
 
+  /* Tasks */
+  tasks = goa_object_get_tasks (GOA_OBJECT (object));
+  tasks_enabled = g_key_file_get_boolean (key_file, group, "TasksEnabled", NULL);
+
+  if (tasks_enabled)
+    {
+      if (tasks == NULL)
+        {
+          tasks = goa_tasks_skeleton_new ();
+          goa_object_skeleton_set_tasks (object, tasks);
+        }
+    }
+  else
+    {
+      if (tasks != NULL)
+        goa_object_skeleton_set_tasks (object, NULL);
+    }
+
   if (just_added)
     {
       goa_account_set_mail_disabled (account, !mail_enabled);
@@ -526,6 +550,7 @@ build_object (GoaProvider         *provider,
       goa_account_set_contacts_disabled (account, !contacts_enabled);
       goa_account_set_chat_disabled (account, !chat_enabled);
       goa_account_set_documents_disabled (account, !documents_enabled);
+      goa_account_set_tasks_disabled (account, !tasks_enabled);
 
       g_signal_connect (account,
                         "notify::mail-disabled",
@@ -547,17 +572,23 @@ build_object (GoaProvider         *provider,
                         "notify::documents-disabled",
                         G_CALLBACK (goa_util_account_notify_property_cb),
                         "DocumentsEnabled");
+      g_signal_connect (account,
+                        "notify::tasks-disabled",
+                        G_CALLBACK (goa_util_account_notify_property_cb),
+                        "TasksEnabled");
     }
 
   ret = TRUE;
 
  out:
+  g_clear_object (&tasks);
   g_clear_object (&documents);
   g_clear_object (&chat);
   g_clear_object (&contacts);
   g_clear_object (&calendar);
   g_clear_object (&mail);
   g_clear_object (&account);
+
   return ret;
 }
 
@@ -708,6 +739,11 @@ show_account (GoaProvider         *provider,
                                                    NULL,
                                                    "documents-disabled",
                                                    _("_Documents"));
+
+  goa_util_add_row_switch_from_keyfile_with_blurb (left, right, object,
+                                                   NULL,
+                                                   "tasks-disabled",
+                                                   _("_Tasks"));
 }
 
 /* ---------------------------------------------------------------------------------------------------- */
@@ -721,6 +757,7 @@ add_account_key_values (GoaOAuth2Provider  *provider,
   g_variant_builder_add (builder, "{ss}", "ContactsEnabled", "true");
   g_variant_builder_add (builder, "{ss}", "ChatEnabled", "true");
   g_variant_builder_add (builder, "{ss}", "DocumentsEnabled", "true");
+  g_variant_builder_add (builder, "{ss}", "TasksEnabled", "true");
 }
 
 /* ---------------------------------------------------------------------------------------------------- */
