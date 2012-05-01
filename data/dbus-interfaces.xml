@@ -203,6 +203,16 @@
     -->
     <property name="TicketingDisabled" type="b" access="readwrite"/>
 
+    <!-- TasksDisabled:
+         If %TRUE, the account will not expose any
+         #org.gnome.OnlineAccounts.Tasks interface. If the account does not
+         provide tasks-like capabilities, this property does nothing.
+
+         Note that the #org.gnomeOnlineAccounts.Tasks interface is added or
+         removed from the account asynchronously.
+    -->
+    <property name="TasksDisabled" type="b" access="readwrite"/>
+
     <!--
         Remove:
 
@@ -621,6 +631,15 @@
          </literal>.
       -->
     <property name="Host" type="s" access="read"/>
+  </interface>
+
+    <!--
+      org.gnome.OnlineAccounts.Tasks:
+
+      An account object implements this interface if it provides
+      tasks-like capabilities.
+  -->
+  <interface name="org.gnome.OnlineAccounts.Tasks">
   </interface>
 
   <!--
